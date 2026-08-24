@@ -25,5 +25,8 @@
     "jsonwebtoken": "^9.0.3",
     "prisma": "^5.22.0",
     "qrcode": "^1.5.4"
+  },
+  "prisma": {
+    "schema": "../prisma/schema.prisma"
   }
 }
