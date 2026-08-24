@@ -53,9 +53,15 @@ async function expireWaitlistOffers() {
           data: { status: 'OFFERED', offerExpiresAt },
         });
         try {
-          await sendWaitlistOffer(next.user.email, next.event.title, next.category, offerExpiresAt);
+          await sendWaitlistOffer(
+            next.user.email,
+            next.user.name,
+            next.event.title,
+            next.category,
+            offerExpiresAt
+          );
         } catch (e) {
-          console.error('[Cleanup] Email error:', e.message);
+          console.error('[Cleanup] Email error:', e.text || e.message);
         }
       }
     }

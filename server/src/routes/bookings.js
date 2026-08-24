@@ -59,7 +59,10 @@ router.post('/', authenticate, async (req, res) => {
             create: seats.map((s) => ({ showSeatId: s.id })),
           },
         },
-        include: { event: true, bookingSeats: { include: { showSeat: { include: { seat: true } } } } },
+        include: {
+          event: { include: { venue: true } },
+          bookingSeats: { include: { showSeat: { include: { seat: true } } } },
+        },
       });
 
       // Mark seats as BOOKED
@@ -71,16 +74,24 @@ router.post('/', authenticate, async (req, res) => {
       return newBooking;
     });
 
-    // Generate QR code
+    // Generate QR code (shown on the confirmation page; email uses booking reference)
     const qrDataUrl = await generateQRDataUrl(booking.reference);
 
-    // Send confirmation email (non-blocking)
+    // Email must not roll back a confirmed booking
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    sendBookingConfirmation(user.email, booking, qrDataUrl).catch((e) =>
-      console.error('[Email] Failed:', e.message)
-    );
+    let emailSent = false;
+    let emailSimulated = false;
+    let emailWarning = null;
+    try {
+      const result = await sendBookingConfirmation(user.email, user.name, booking);
+      emailSent = true;
+      emailSimulated = !!result?.simulated;
+    } catch (e) {
+      console.error('[Email] Failed:', e.text || e.message);
+      emailWarning = 'Booking is confirmed, but the confirmation email could not be sent.';
+    }
 
-    res.status(201).json({ ...booking, qrDataUrl });
+    res.status(201).json({ ...booking, qrDataUrl, emailSent, emailSimulated, emailWarning });
   } catch (err) {
     console.error('[Booking]', err.message);
     res.status(400).json({ error: err.message || 'Booking failed' });
@@ -178,12 +189,13 @@ router.post('/:id/cancel', authenticate, async (req, res) => {
         try {
           await sendWaitlistOffer(
             nextWaiting.user.email,
+            nextWaiting.user.name,
             nextWaiting.event.title,
             category,
             offerExpiresAt
           );
         } catch (e) {
-          console.error('[Waitlist Email]', e.message);
+          console.error('[Waitlist Email]', e.text || e.message);
         }
       }
     }

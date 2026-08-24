@@ -36,7 +36,7 @@ A full-stack web application for booking tickets to movies and concerts. Built a
 | Database    | SQLite via Prisma ORM 5             |
 | Auth        | JWT (jsonwebtoken) + bcryptjs       |
 | QR Code     | `qrcode` npm package               |
-| Email       | Nodemailer (optional SMTP)          |
+| Email       | EmailJS (`@emailjs/nodejs`)         |
 
 ## Project Structure
 
@@ -102,7 +102,8 @@ cp .env.example .env
 # Edit server/.env — the defaults work for local development
 ```
 
-Default `server/.env`:
+Copy `.env.example` to `server/.env` and fill in values. Defaults for local development:
+
 ```
 DATABASE_URL="file:../dev.db"
 JWT_SECRET="your-super-secret-jwt-key-change-in-production"
@@ -149,12 +150,52 @@ npm run dev
 | JWT_SECRET   | Secret key for JWT signing               | Yes      |
 | PORT         | Backend port (default: 4000)             | No       |
 | CLIENT_URL   | Frontend URL for CORS (default: localhost:5173) | No |
-| SMTP_HOST    | SMTP server hostname                     | No       |
-| SMTP_PORT    | SMTP port (default: 587)                 | No       |
-| SMTP_USER    | SMTP username/email                      | No       |
-| SMTP_PASS    | SMTP password                            | No       |
+| EMAILJS_PUBLIC_KEY | EmailJS public key                  | For real email |
+| EMAILJS_PRIVATE_KEY | EmailJS private key (server only)  | For real email |
+| EMAILJS_SERVICE_ID | EmailJS service ID (`service_...`) | For real email |
+| EMAILJS_TEMPLATE_ID | EmailJS template ID (`template_...`) | For real email |
 
-> If SMTP is not configured, emails are **simulated** (printed to server console).
+> If EmailJS is not configured, emails are **simulated** (printed to the server console). Booking and waitlist still succeed if sending fails.
+
+## EmailJS setup (one template)
+
+EmailJS **free plans allow one template**. This app sends both booking confirmation and waitlist offers through that single template.
+
+1. Create an account at [emailjs.com](https://www.emailjs.com/).
+2. **Email Services** → add Gmail (or another provider) → copy **Service ID**.
+3. **Account → Security** → enable **Allow API requests from non-browser applications**.
+4. **Account → API Keys** → copy **Public Key** and **Private Key**. Never put the private key in frontend code or git.
+5. **Email Templates** → create **one** template (e.g. TicketForge Booking Confirmation).
+6. Set **To Email** to `{{to_email}}` (not a hardcoded address).
+7. Set **From Name** to `TicketForge`, keep **Use Default Email Address**.
+8. **Subject:** `{{email_subject}}`
+9. **Body** — keep your booking fields and add `{{intro_text}}` so waitlist mail is not titled as a confirmed booking:
+
+```
+Hello {{customer_name}},
+
+{{intro_text}}
+
+Event: {{event_name}}
+Venue: {{venue}}
+Date: {{date}}
+Time: {{time}}
+Seats: {{seat_numbers}}
+Total: ₹{{total_amount}}
+Booking reference: {{booking_reference}}
+Ticket: {{ticket_info}}
+Seat/category: {{seat_category}}
+Offer expires: {{offer_expires_at}}
+
+View / accept: {{booking_url}}
+
+Thank you for using TicketForge.
+```
+
+10. Copy **Template ID** from the Settings tab.
+11. Put all four IDs/keys in `server/.env` as `EMAILJS_*` (see `.env.example`).
+
+The QR code stays on the booking confirmation page. Emails include the booking reference and a link, not the QR image.
 
 ## Demo Credentials
 
@@ -276,7 +317,7 @@ SQLite's serialized writes ensure only one transaction can modify a row at a tim
    → Seats released to AVAILABLE
    → System finds EARLIEST WAITING entry (FIFO)
    → Updates status: OFFERED, offerExpiresAt: now + 2 min
-   → Email sent (or simulated)
+   → EmailJS waitlist email sent (or simulated)
 
 4. Customer sees offer in "My Bookings → Waitlist" tab
    → Countdown timer showing time left
@@ -299,7 +340,7 @@ BOOKING:TB-2026-AB12CD
 The QR is:
 - Displayed on the confirmation page
 - Downloadable as PNG
-- Included in the confirmation email (if SMTP configured)
+- Referenced in the EmailJS confirmation email by booking reference (not embedded as an image)
 
 ## Deployment
 

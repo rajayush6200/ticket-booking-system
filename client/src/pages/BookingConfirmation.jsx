@@ -99,9 +99,19 @@ export default function BookingConfirmation() {
           </div>
         </div>
 
-        <div className="alert alert-success">
-          ✅ A confirmation email has been sent (simulated in demo mode). Check the server console.
-        </div>
+        {booking.emailWarning ? (
+          <div className="alert alert-warning">
+            ⚠️ {booking.emailWarning} Your tickets are still valid — keep this page or My Bookings for your QR code.
+          </div>
+        ) : booking.emailSimulated ? (
+          <div className="alert alert-success">
+            ✅ Booking confirmed. Email is in demo mode (check the server console). Add EmailJS keys to send real mail.
+          </div>
+        ) : (
+          <div className="alert alert-success">
+            ✅ A confirmation email has been sent to your account email.
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1.5rem' }}>
           <button className="btn btn-secondary" onClick={() => navigate('/my-bookings')}>
