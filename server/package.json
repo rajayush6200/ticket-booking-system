@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
+    "build": "npx prisma generate",
     "db:migrate": "npx prisma migrate dev --name init --schema=../prisma/schema.prisma",
     "db:seed": "node src/seed.js",
     "db:studio": "npx prisma studio --schema=../prisma/schema.prisma",
