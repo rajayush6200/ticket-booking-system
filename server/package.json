@@ -1,0 +1,17 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "TicketForge Backend — Express + Prisma + SQLite",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "db:migrate": "npx prisma migrate dev --name init --schema=../prisma/schema.prisma",
+    "db:seed": "node src/seed.js",
+    "db:studio": "npx prisma studio --schema=../prisma/schema.prisma",
+    "test": "node ../tests/booking.test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

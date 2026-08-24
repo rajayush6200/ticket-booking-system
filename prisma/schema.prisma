@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  password  String
+  role      String    @default("CUSTOMER") // CUSTOMER, ORGANISER, ADMIN
+  createdAt DateTime  @default(now())
+
+  bookings  Booking[]
+  waitlist  Waitlist[]
+  heldSeats ShowSeat[]
+}
+
+model Venue {
+  id          Int     @id @default(autoincrement())
+  name        String
+  rows        Int
+  seatsPerRow Int
+  seats       Seat[]
+  events      Event[]
+}
+
+model Seat {
+  id       Int    @id @default(autoincrement())
+  venueId  Int
+  row      String
+  number   Int
+  category String // PREMIUM, STANDARD
+  price    Float
+
+  venue     Venue      @relation(fields: [venueId], references: [id])
+  showSeats ShowSeat[]
+}
+
+model Event {
+  id          Int      @id @default(autoincrement())
+  title       String
+  type        String   // MOVIE, CONCERT
+  venueId     Int
+  date        String
+  time        String
+  description String
+  status      String   @default("ACTIVE") // ACTIVE, CANCELLED, COMPLETED
+
+  venue     Venue      @relation(fields: [venueId], references: [id])
+  showSeats ShowSeat[]
+  bookings  Booking[]
+  waitlist  Waitlist[]
+}
+
+model ShowSeat {
+  id             Int       @id @default(autoincrement())
+  eventId        Int
+  seatId         Int
+  status         String    @default("AVAILABLE") // AVAILABLE, HELD, BOOKED
+  heldById       Int?
+  holdExpiresAt  DateTime?
+
+  event        Event         @relation(fields: [eventId], references: [id])
+  seat         Seat          @relation(fields: [seatId], references: [id])
+  heldBy       User?         @relation(fields: [heldById], references: [id])
+  bookingSeats BookingSeat[]
+}
+
+model Booking {
+  id          Int      @id @default(autoincrement())
+  reference   String   @unique
+  userId      Int
+  eventId     Int
+  totalAmount Float
+  status      String   @default("CONFIRMED") // CONFIRMED, CANCELLED
+  createdAt   DateTime @default(now())
+
+  user         User          @relation(fields: [userId], references: [id])
+  event        Event         @relation(fields: [eventId], references: [id])
+  bookingSeats BookingSeat[]
+}
+
+model BookingSeat {
+  id         Int @id @default(autoincrement())
+  bookingId  Int
+  showSeatId Int
+
+  booking  Booking  @relation(fields: [bookingId], references: [id])
+  showSeat ShowSeat @relation(fields: [showSeatId], references: [id])
+}
+
+model Waitlist {
+  id             Int       @id @default(autoincrement())
+  userId         Int
+  eventId        Int
+  category       String
+  status         String    @default("WAITING") // WAITING, OFFERED, FULFILLED, EXPIRED
+  offerExpiresAt DateTime?
+  createdAt      DateTime  @default(now())
+
+  user  User  @relation(fields: [userId], references: [id])
+  event Event @relation(fields: [eventId], references: [id])
+}
